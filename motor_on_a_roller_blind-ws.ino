@@ -11,6 +11,11 @@
 #include <WebSocketsServer.h>
 #include "NidayandHelper.h"
 #include "index_html.h"
+#include <time.h> 
+
+#define NTP_SERVER "europe.pool.ntp.org"
+#define TZ 10800
+#define SCHEDULE_CHECK_INTERVAL 10000
 
 //--------------- CHANGE PARAMETERS ------------------
 //Configure Default Settings for Access Point logon
@@ -62,8 +67,38 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 char static_ip[16] = "192.168.1.150";
 char static_gw[16] = "192.168.1.1";
 char static_sn[16] = "255.255.255.0";
+char static_dns[16] = "8.8.8.8";
 
 WiFiManager wifiManager;
+
+time_t now;                         // this are the seconds since Epoch (1970) - UTC
+tm tm;                              // the structure tm holds time information in a more convenient way
+
+unsigned long lastScheduleCheckMillis = 0;
+
+void showTime() {
+  time(&now);                       // read the current time
+  localtime_r(&now, &tm);           // update the structure tm with the current time
+  Serial.print("year:");
+  Serial.print(tm.tm_year + 1900);  // years since 1900
+  Serial.print("\tmonth:");
+  Serial.print(tm.tm_mon + 1);      // January = 0 (!)
+  Serial.print("\tday:");
+  Serial.print(tm.tm_mday);         // day of month
+  Serial.print("\thour:");
+  Serial.print(tm.tm_hour);         // hours since midnight  0-23
+  Serial.print("\tmin:");
+  Serial.print(tm.tm_min);          // minutes after the hour  0-59
+  Serial.print("\tsec:");
+  Serial.print(tm.tm_sec);          // seconds after the minute  0-61*
+  Serial.print("\twday");
+  Serial.print(tm.tm_wday);         // days since Sunday 0-6
+  if (tm.tm_isdst == 1)             // Daylight Saving Time flag
+    Serial.print("\tDST");
+  else
+    Serial.print("\tstandard");
+  Serial.println();
+}
 
 bool loadConfig() {
   if (!helper.loadconfig()){
@@ -350,6 +385,8 @@ void setup(void)
   delay(100);
   Serial.print("Starting now\n");
 
+  configTime(TZ,0,NTP_SERVER);
+
   //handleReset();
   
   //Reset the action
@@ -375,12 +412,13 @@ void setup(void)
   //Setup WIFI Manager
 
   //set static ip
-  IPAddress _ip, _gw, _sn;
+  IPAddress _ip, _gw, _sn, _dns;
   _ip.fromString(static_ip);
   _gw.fromString(static_gw);
   _sn.fromString(static_sn);
+  _dns.fromString(static_dns);
 
-  wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
+  wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn, _dns);
   
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   //add all your parameters here
@@ -482,6 +520,11 @@ void setup(void)
 
 void loop(void)
 {
+  unsigned long currentMillis = millis();
+  if(currentMillis - lastScheduleCheckMillis > SCHEDULE_CHECK_INTERVAL){
+    lastScheduleCheckMillis = currentMillis;
+    showTime();
+  }
 
   //Websocket listner
   webSocket.loop();
