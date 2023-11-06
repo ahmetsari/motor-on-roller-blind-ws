@@ -63,10 +63,10 @@ String NidayandHelper::mqtt_gettopic(String type) {
 
 
 void NidayandHelper::mqtt_reconnect(PubSubClient& psclient){
-  return mqtt_reconnect(psclient, String(NULL), String(NULL));
+  return mqtt_reconnect(psclient, String(""), String(""));
 }
 void NidayandHelper::mqtt_reconnect(PubSubClient& psclient, std::list<const char*> topics){
-  return mqtt_reconnect(psclient, String(NULL), String(NULL), topics);
+  return mqtt_reconnect(psclient, String(""), String(""), topics);
 }
 void NidayandHelper::mqtt_reconnect(PubSubClient& psclient, String uid, String pwd){
   std::list<const char*> mylist;
@@ -75,7 +75,7 @@ void NidayandHelper::mqtt_reconnect(PubSubClient& psclient, String uid, String p
 void NidayandHelper::mqtt_reconnect(PubSubClient& psclient, String uid, String pwd, std::list<const char*> topics){
   // Loop until we're reconnected
   boolean mqttLogon = false;
-  if (uid!=NULL and pwd != NULL){
+  if (uid!="" and pwd != ""){
     mqttLogon = true;
   }
   while (!psclient.connected()) {
