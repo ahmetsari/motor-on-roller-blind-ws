@@ -74,30 +74,16 @@ WiFiManager wifiManager;
 time_t now;                         // this are the seconds since Epoch (1970) - UTC
 tm tm;                              // the structure tm holds time information in a more convenient way
 
+String lastProcessedTime = "";
 unsigned long lastScheduleCheckMillis = 0;
 
-void showTime() {
-  time(&now);                       // read the current time
-  localtime_r(&now, &tm);           // update the structure tm with the current time
-  Serial.print("year:");
-  Serial.print(tm.tm_year + 1900);  // years since 1900
-  Serial.print("\tmonth:");
-  Serial.print(tm.tm_mon + 1);      // January = 0 (!)
-  Serial.print("\tday:");
-  Serial.print(tm.tm_mday);         // day of month
-  Serial.print("\thour:");
-  Serial.print(tm.tm_hour);         // hours since midnight  0-23
-  Serial.print("\tmin:");
-  Serial.print(tm.tm_min);          // minutes after the hour  0-59
-  Serial.print("\tsec:");
-  Serial.print(tm.tm_sec);          // seconds after the minute  0-61*
-  Serial.print("\twday");
-  Serial.print(tm.tm_wday);         // days since Sunday 0-6
-  if (tm.tm_isdst == 1)             // Daylight Saving Time flag
-    Serial.print("\tDST");
-  else
-    Serial.print("\tstandard");
-  Serial.println();
+String getCurrentTime() {
+  time(&now);     // read the current time
+  localtime_r(&now, &tm); // update the structure tm with the current time
+  char dts[22]; 
+  strftime(dts, sizeof(dts), "%H:%M", &tm);
+  return String(dts);
+  
 }
 
 bool loadConfig() {
@@ -222,8 +208,8 @@ void processMsg(String command, String value, int motor_num, uint8_t clientnum){
 
   } else if (command == "update") {
     //Send position details to client
-    sendPos(0,clientnum);
-    sendPos(1,clientnum);
+    sendState(0,clientnum);
+    sendState(1,clientnum);
 
   } else if (command == "ping") {
     //Do nothing
@@ -241,7 +227,7 @@ void processMsg(String command, String value, int motor_num, uint8_t clientnum){
       actions[motor_num] = "auto";
 
       //Send the instruction to all connected devices
-      sendPos(motor_num,-1);
+      sendState(motor_num,-1);
   } else if (command == "schedule") {
     int i = value.indexOf(";");
     String open = value.substring(0, i);
@@ -355,7 +341,7 @@ void handleNotFound(){
   server.send(404, "text/plain", message);
 }
 
-void sendPos(int index, int clientNum){
+void sendState(int index, int clientNum){
         //Send position details to client
         int maxPos = maxPositions[index];
         if(maxPos == 0){
@@ -363,7 +349,7 @@ void sendPos(int index, int clientNum){
         }
         int set = (setPos[index] * 100)/maxPos;
         int pos = (currentPositions[index] * 100)/maxPos;
-        String payload = "{\"id\":"+String(index)+",\"set\":"+String(set)+", \"position\":"+String(pos)+"}";
+        String payload = "{\"id\":"+String(index)+",\"set\":"+String(set)+", \"position\":"+String(pos)+", \"scheduledOpen\":\""+scheduledOpen[index]+"\", \"scheduledClose\":\""+scheduledClose[index]+"\"}";
         sendmsg(outputTopic, payload);
         if(clientNum == -1){
             webSocket.broadcastTXT(payload);
@@ -377,6 +363,30 @@ void extractRotationConfig(){
     int i = String(config_rotation).indexOf(";");
     ccw[0] = String(config_rotation).substring(0, i)=="0";
     ccw[1] = String(config_rotation).substring(i+1)=="0";
+}
+
+void handleScheduledAction(){
+ unsigned long currentMillis = millis();
+  if(currentMillis - lastScheduleCheckMillis > SCHEDULE_CHECK_INTERVAL){
+    lastScheduleCheckMillis = currentMillis;
+    String currentTime = getCurrentTime();
+    if(currentTime != lastProcessedTime){
+        lastProcessedTime = currentTime;
+        Serial.println(currentTime);
+        for(int i=0; i<2; i++){
+            if(scheduledOpen[i] == currentTime){
+                actions[i] = "auto";
+                paths[i] = 0;
+                Serial.println("Auto Open " + String(i));
+            }
+            if(scheduledClose[i] == currentTime){
+                  actions[i] = "auto";
+                  paths[i] = maxPositions[i];
+                  Serial.println("Auto Close " + String(i));
+            }
+        }
+    }
+  }
 }
 
 void setup(void)
@@ -520,11 +530,7 @@ void setup(void)
 
 void loop(void)
 {
-  unsigned long currentMillis = millis();
-  if(currentMillis - lastScheduleCheckMillis > SCHEDULE_CHECK_INTERVAL){
-    lastScheduleCheckMillis = currentMillis;
-    showTime();
-  }
+  handleScheduledAction();
 
   //Websocket listner
   webSocket.loop();
@@ -577,7 +583,7 @@ void loop(void)
           } else {
             paths[i] = 0;
             actions[i] = "";
-            sendPos(i, -1);
+            sendState(i, -1);
             Serial.println("Stopped. Reached wanted position");
             saveItNow[i] = 1;
             stopPowerToCoils(i);
