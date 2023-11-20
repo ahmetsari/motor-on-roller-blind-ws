@@ -111,13 +111,6 @@
 
         const setActions = function(){
             setTimeout(function(){doSend(undefined, 'update', 0);}, 500);
-            $.get('https://api.github.com/repos/ahmetsari/'+repo+'/releases', function(data){
-                if (data.length>0 && data[0].tag_name !== cversion){
-                    $('#cversion').text(cversion);
-                    $('#nversion').text(data[0].tag_name);
-                    $('#update-card').show();
-                }
-            });
 
             setTimeout(function(){
                 renderPage()
@@ -315,9 +308,6 @@
                 <ons-list-item onclick='fn.load("settings.html")' tappable>
                     Settings
                 </ons-list-item>
-                <ons-list-item onclick='fn.load("about.html")' tappable>
-                    About
-                </ons-list-item>
             </ons-list>
         </ons-page>
     </ons-splitter-side>
@@ -337,11 +327,6 @@
         <div id="pageContent">
             <!-- Page content will be rendered here -->
         </div>
-
-        <ons-card id='update-card' style='display:none'>
-            <div class='title'>Update available</div>
-            <div class='content'>You are running <span id='cversion'></span> and <span id='nversion'></span> is the latest. Go to <a href='https://github.com/ahmetsari/motor-on-roller-blind-ws/releases'>the repo</a> to download</div>
-        </ons-card>
     </ons-page>
 </template>
 
@@ -358,49 +343,9 @@
             </div>
         </ons-toolbar>
 
-        <ons-card>
-            <div class='title'>Instructions</div>
-            <div class='content'>
-                <p>
-                <ol>
-                    <li>Use the arrows and stop button to navigate to the top position i.e. the blind is opened</li>
-                    <li>Click the START button</li>
-                    <li>Use the down arrow to navigate to the max closed position</li>
-                    <li>Click the MAX button</li>
-                    <li>Calibration is completed!</li>
-                </ol>
-                </p>
-            </div>
-        </ons-card>
-
         <div id="settingsContent">
             <!-- Settings content will be rendered here -->
         </div>
-    </ons-page>
-</template>
-
-<template id='about.html'>
-    <ons-page>
-        <ons-toolbar>
-            <div class='left'>
-                <ons-toolbar-button onclick='fn.open()'>
-                    <ons-icon icon='md-menu'></ons-icon>
-                </ons-toolbar-button>
-            </div>
-            <div class='center'>
-                About
-            </div>
-        </ons-toolbar>
-        <ons-card>
-            <div class='title'>Motor on a roller blind</div>
-            <div class='content'>
-                <p>
-                <ul>
-                    <li>Github: <a href='https://github.com/ahmetsari/motor-on-roller-blind-ws' target='_blank'>https://github.com/ahmetsari/motor-on-roller-blind-ws</a></li>
-                </ul>
-                </p>
-            </div>
-        </ons-card>
     </ons-page>
 </template>
 
